@@ -31,8 +31,7 @@ void example_message_arrive(void *pcontext, void *pclient, iotx_mqtt_event_msg_p
             EXAMPLE_TRACE("Topic  : %.*s", topic_info->topic_len, topic_info->ptopic);
             EXAMPLE_TRACE("Payload: %.*s", topic_info->payload_len, topic_info->payload);
             EXAMPLE_TRACE("\n");
-
-            EXAMPLE_TRACE("Payload: %.*s\n", topic_info->payload);
+            //EXAMPLE_TRACE("topic message: %.*s", topic_info->payload);
             break;
         default:
             break;
@@ -42,7 +41,7 @@ void example_message_arrive(void *pcontext, void *pclient, iotx_mqtt_event_msg_p
 int example_subscribe(void *handle)
 {
     int res = 0;
-    const char *fmt = "/%s/%s/user/get";
+    const char *fmt = "/sys/%s/%s/thing/event/property/post_reply";
     char *topic = NULL;
     int topic_len = 0;
 
@@ -69,7 +68,7 @@ int example_subscribe(void *handle)
 int example_publish(void *handle)
 {
     int             res = 0;
-    const char     *fmt = "/%s/%s/user/get";
+    const char     *fmt = "/sys/%s/%s/thing/event/property/post";
     char           *topic = NULL;
     int             topic_len = 0;
     char           *payload = "{\"message\":\"hello!\"}";
@@ -154,7 +153,8 @@ int mqtt_main(void *paras)
      *  default value is 1883 in TCP case, and 443 in TLS case
      */
     mqtt_params.port = 1881; 
-
+    HAL_Printf("host:%s\n",mqtt_params.host);
+    HAL_Printf("port:%d\n",mqtt_params.port);
     /**
      *
      * MQTT request timeout interval
