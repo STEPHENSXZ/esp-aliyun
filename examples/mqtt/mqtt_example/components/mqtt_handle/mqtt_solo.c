@@ -31,6 +31,8 @@ void example_message_arrive(void *pcontext, void *pclient, iotx_mqtt_event_msg_p
             EXAMPLE_TRACE("Topic  : %.*s", topic_info->topic_len, topic_info->ptopic);
             EXAMPLE_TRACE("Payload: %.*s", topic_info->payload_len, topic_info->payload);
             EXAMPLE_TRACE("\n");
+
+            EXAMPLE_TRACE("Payload: %.*s\n", topic_info->payload);
             break;
         default:
             break;
@@ -141,7 +143,7 @@ int mqtt_main(void *paras)
      *
      *  default value is ${productKey}.iot-as-mqtt.cn-shanghai.aliyuncs.com
      */
-    /* mqtt_params.host = "something.iot-as-mqtt.cn-shanghai.aliyuncs.com"; */
+     mqtt_params.host = "192.168.1.4"; 
 
     /**
      *
@@ -151,7 +153,7 @@ int mqtt_main(void *paras)
      *
      *  default value is 1883 in TCP case, and 443 in TLS case
      */
-    /* mqtt_params.port = 1883; */
+    mqtt_params.port = 1881; 
 
     /**
      *
