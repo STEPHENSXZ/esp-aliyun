@@ -42,6 +42,7 @@ int example_subscribe(void *handle)
 {
     int res = 0;
     const char *fmt = "/sys/%s/%s/thing/event/property/post_reply";
+    //const char *fmt = "/%s/%s/user/get";
     char *topic = NULL;
     int topic_len = 0;
 
@@ -68,7 +69,9 @@ int example_subscribe(void *handle)
 int example_publish(void *handle)
 {
     int             res = 0;
+    //自己给自己发
     const char     *fmt = "/sys/%s/%s/thing/event/property/post";
+    //const char     *fmt = "/%s/%s/user/get";
     char           *topic = NULL;
     int             topic_len = 0;
     char           *payload = "{\"message\":\"hello!\"}";
