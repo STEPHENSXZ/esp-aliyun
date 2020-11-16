@@ -1,7 +1,3 @@
-
-/*
- * Copyright (C) 2015-2018 Alibaba Group Holding Limited
- */
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
@@ -9,9 +5,80 @@
 #include "mqtt_api.h"
 #include "dm_wrapper.h"
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "esp_system.h"
+#include "esp_log.h"
+#include "driver/uart.h"
+#include "string.h"
+#include "driver/gpio.h"
+static const int RX_BUF_SIZE = 1024;
+static const int uart_num = UART_NUM_2;
+#define TXD_PIN (GPIO_NUM_16)
+#define RXD_PIN (GPIO_NUM_17)
+
 char DEMO_PRODUCT_KEY[IOTX_PRODUCT_KEY_LEN + 1] = {0};
 char DEMO_DEVICE_NAME[IOTX_DEVICE_NAME_LEN + 1] = {0};
 char DEMO_DEVICE_SECRET[IOTX_DEVICE_SECRET_LEN + 1] = {0};
+
+void init(void) {
+    const uart_config_t uart_config = {
+        .baud_rate = 115200,
+        .data_bits = UART_DATA_8_BITS,
+        .parity = UART_PARITY_DISABLE,
+        .stop_bits = UART_STOP_BITS_1,
+        .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
+        .rx_flow_ctrl_thresh = 122,		//
+    };
+    // We won't use a buffer for sending data.
+    uart_driver_install(uart_num, RX_BUF_SIZE * 2, 0, 0, NULL, 0);
+    uart_param_config(uart_num, &uart_config);
+    uart_set_pin(uart_num, TXD_PIN, RXD_PIN, UART_PIN_NO_CHANGE, UART_PIN_NO_CHANGE); 
+}
+
+int sendData(const char* logName, const char* data)
+{
+    const int len = strlen(data);
+    const int txBytes = uart_write_bytes(uart_num, data, len);
+    ESP_LOGI(logName, "Wrote %d bytes", txBytes);
+    return txBytes;
+}
+
+static void tx_task(void *arg)
+{
+    static const char *TX_TASK_TAG = "TX_TASK";
+    esp_log_level_set(TX_TASK_TAG, ESP_LOG_INFO);
+        while(1){
+            sendData(TX_TASK_TAG, "Hello world");
+            vTaskDelay(2000 / portTICK_PERIOD_MS);
+        }
+}
+
+static void rx_task(void *arg)
+{
+    static const char *RX_TASK_TAG = "RX_TASK";
+    int rxBytes;
+    size_t buf_ok;
+    uint32_t cnt=0;
+    esp_log_level_set(RX_TASK_TAG, ESP_LOG_INFO);
+    uint8_t* data = (uint8_t*) malloc(RX_BUF_SIZE+1);
+    while (1) {
+        ESP_ERROR_CHECK(uart_get_buffered_data_len(uart_num, &buf_ok));
+        if (buf_ok>0) {
+            ESP_LOGI(RX_TASK_TAG, "read Begin");
+            rxBytes = uart_read_bytes(uart_num, data, buf_ok, 1000 / portTICK_RATE_MS);
+            if (rxBytes > 0) {
+                data[rxBytes] = 0;
+                ESP_LOGI(RX_TASK_TAG, "Read %d(%d) bytes: '%s'", rxBytes, buf_ok, data);
+                ESP_LOG_BUFFER_HEXDUMP(RX_TASK_TAG, data, rxBytes, ESP_LOG_INFO);
+            }
+            ESP_LOGI(RX_TASK_TAG, "Recv Task cnt=%d.", cnt);
+        }
+        cnt++;
+        vTaskDelay(100 / portTICK_PERIOD_MS);
+    }
+    free(data);
+}
 
 #define EXAMPLE_TRACE(fmt, ...)  \
     do { \
@@ -22,8 +89,8 @@ char DEMO_DEVICE_SECRET[IOTX_DEVICE_SECRET_LEN + 1] = {0};
 
 void example_message_arrive(void *pcontext, void *pclient, iotx_mqtt_event_msg_pt msg)
 {
+    static const char *TX_TASK_TAG = "TX_TASK";
     iotx_mqtt_topic_info_t     *topic_info = (iotx_mqtt_topic_info_pt) msg->msg;
-
     switch (msg->event_type) {
         case IOTX_MQTT_EVENT_PUBLISH_RECEIVED:
             /* print topic name and topic message */
@@ -31,8 +98,11 @@ void example_message_arrive(void *pcontext, void *pclient, iotx_mqtt_event_msg_p
             EXAMPLE_TRACE("Topic  : %.*s", topic_info->topic_len, topic_info->ptopic);
             EXAMPLE_TRACE("Payload: %.*s", topic_info->payload_len, topic_info->payload);
             EXAMPLE_TRACE("\n");
-
-            EXAMPLE_TRACE("Payload: %.*s\n", topic_info->payload);
+            esp_log_level_set(TX_TASK_TAG, ESP_LOG_INFO);
+            sendData(TX_TASK_TAG, topic_info->payload);
+            //EXAMPLE_TRACE("topic message: %.*s", topic_info->payload);
+            xTaskCreate(rx_task, "uart_rx_task", 1024*2, NULL, configMAX_PRIORITIES, NULL);
+            //xTaskCreate(tx_task, "uart_tx_task", 1024*2, NULL, configMAX_PRIORITIES-1, NULL);
             break;
         default:
             break;
@@ -42,7 +112,8 @@ void example_message_arrive(void *pcontext, void *pclient, iotx_mqtt_event_msg_p
 int example_subscribe(void *handle)
 {
     int res = 0;
-    const char *fmt = "/%s/%s/user/get";
+    const char *fmt = "/sys/%s/%s/thing/event/property/post_reply";
+    //const char *fmt = "/%s/%s/user/get";
     char *topic = NULL;
     int topic_len = 0;
 
@@ -61,7 +132,6 @@ int example_subscribe(void *handle)
         HAL_Free(topic);
         return -1;
     }
-
     HAL_Free(topic);
     return 0;
 }
@@ -69,7 +139,9 @@ int example_subscribe(void *handle)
 int example_publish(void *handle)
 {
     int             res = 0;
-    const char     *fmt = "/%s/%s/user/get";
+    //自己给自己发
+    const char     *fmt = "/sys/%s/%s/thing/event/property/post";
+    //const char     *fmt = "/%s/%s/user/get";
     char           *topic = NULL;
     int             topic_len = 0;
     char           *payload = "{\"message\":\"hello!\"}";
@@ -99,19 +171,6 @@ void example_event_handle(void *pcontext, void *pclient, iotx_mqtt_event_msg_pt 
     EXAMPLE_TRACE("msg->event_type : %d", msg->event_type);
 }
 
-/*
- *  NOTE: About demo topic of /${productKey}/${deviceName}/user/get
- *
- *  The demo device has been configured in IoT console (https://iot.console.aliyun.com)
- *  so that its /${productKey}/${deviceName}/user/get can both be subscribed and published
- *
- *  We design this to completely demonstrate publish & subscribe process, in this way
- *  MQTT client can receive original packet sent by itself
- *
- *  For new devices created by yourself, pub/sub privilege also requires being granted
- *  to its /${productKey}/${deviceName}/user/get for successfully running whole example
- */
-
 int mqtt_main(void *paras)
 {
     void                   *pclient = NULL;
@@ -126,102 +185,18 @@ int mqtt_main(void *paras)
     EXAMPLE_TRACE("mqtt example");
 
     /* Initialize MQTT parameter */
-    /*
-     * Note:
-     *
-     * If you did NOT set value for members of mqtt_params, SDK will use their default values
-     * If you wish to customize some parameter, just un-comment value assigning expressions below
-     *
-     **/
     memset(&mqtt_params, 0x0, sizeof(mqtt_params));
 
-    /**
-     *
-     *  MQTT connect hostname string
-     *
-     *  MQTT server's hostname can be customized here
-     *
-     *  default value is ${productKey}.iot-as-mqtt.cn-shanghai.aliyuncs.com
-     */
-     mqtt_params.host = "192.168.1.4"; 
+    
+    //MQTT connect hostname string
+     mqtt_params.host = "8.129.38.251"; 
 
-    /**
-     *
-     *  MQTT connect port number
-     *
-     *  TCP/TLS port which can be 443 or 1883 or 80 or etc, you can customize it here
-     *
-     *  default value is 1883 in TCP case, and 443 in TLS case
-     */
+    //MQTT connect port number
+
     mqtt_params.port = 1881; 
-
-    /**
-     *
-     * MQTT request timeout interval
-     *
-     * MQTT message request timeout for waiting ACK in MQTT Protocol
-     *
-     * default value is 2000ms.
-     */
-    /* mqtt_params.request_timeout_ms = 2000; */
-
-    /**
-     *
-     * MQTT clean session flag
-     *
-     * If CleanSession is set to 0, the Server MUST resume communications with the Client based on state from
-     * the current Session (as identified by the Client identifier).
-     *
-     * If CleanSession is set to 1, the Client and Server MUST discard any previous Session and Start a new one.
-     *
-     * default value is 0.
-     */
-    /* mqtt_params.clean_session = 0; */
-
-    /**
-     *
-     * MQTT keepAlive interval
-     *
-     * KeepAlive is the maximum time interval that is permitted to elapse between the point at which
-     * the Client finishes transmitting one Control Packet and the point it starts sending the next.
-     *
-     * default value is 60000.
-     */
-    /* mqtt_params.keepalive_interval_ms = 60000; */
-
-    /**
-     *
-     * MQTT write buffer size
-     *
-     * Write buffer is allocated to place upstream MQTT messages, MQTT client will be limitted
-     * to send packet no longer than this to Cloud
-     *
-     * default value is 1024.
-     *
-     */
-    /* mqtt_params.write_buf_size = 1024; */
-
-    /**
-     *
-     * MQTT read buffer size
-     *
-     * Write buffer is allocated to place downstream MQTT messages, MQTT client will be limitted
-     * to recv packet no longer than this from Cloud
-     *
-     * default value is 1024.
-     *
-     */
-    /* mqtt_params.read_buf_size = 1024; */
-
-    /**
-     *
-     * MQTT event callback function
-     *
-     * Event callback function will be called by SDK when it want to notify user what is happening inside itself
-     *
-     * default value is NULL, which means PUB/SUB event won't be exposed.
-     *
-     */
+    HAL_Printf("host:%s\n",mqtt_params.host);
+    HAL_Printf("port:%d\n",mqtt_params.port);
+    init();// init uart information
     mqtt_params.handle_event.h_fp = example_event_handle;
 
     pclient = IOT_MQTT_Construct(&mqtt_params);
