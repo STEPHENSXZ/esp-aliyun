@@ -4,7 +4,7 @@
 #include "infra_defs.h"
 
 const char * g_infra_mqtt_domain[IOTX_MQTT_DOMAIN_NUMBER] = {
-    "8.129.38.251",       /* Shanghai */
+    "192.168.1.4",       /* Shanghai */
     "iot-as-mqtt.ap-southeast-1.aliyuncs.com",    /* Singapore */
     "iot-as-mqtt.ap-northeast-1.aliyuncs.com",    /* Japan */
     "iot-as-mqtt.us-west-1.aliyuncs.com",         /* America */

@@ -193,7 +193,7 @@ int mqtt_main(void *paras)
 
     //MQTT connect port number
 
-    mqtt_params.port = 1881; 
+    mqtt_params.port = 1882; 
     HAL_Printf("host:%s\n",mqtt_params.host);
     HAL_Printf("port:%d\n",mqtt_params.port);
     init();// init uart information
