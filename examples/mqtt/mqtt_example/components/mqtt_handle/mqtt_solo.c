@@ -217,19 +217,15 @@ int mqtt_main(void *paras)
         return -1;
     }
 
-    // while (1) {
-    //     if (0 == loop_cnt % 20) {
-    //         example_publish(pclient);
-    //     }
+    while (1) {
+        if (0 == loop_cnt % 3000) {
+            example_publish(pclient);
+        }
 
-    //     IOT_MQTT_Yield(pclient, 200);
+        IOT_MQTT_Yield(pclient, 200);
 
-    //     loop_cnt += 1;
-    // }
-
-    example_publish(pclient);
-    IOT_MQTT_Yield(pclient, 200);
-    
+        loop_cnt += 1;
+    }
     return 0;
 }
 
