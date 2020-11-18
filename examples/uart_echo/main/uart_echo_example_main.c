@@ -49,7 +49,7 @@ static void tx_task(void *arg)
     static const char *TX_TASK_TAG = "TX_TASK";
     esp_log_level_set(TX_TASK_TAG, ESP_LOG_INFO);
     while (1) {
-        sendData(TX_TASK_TAG, "Hello world");
+       sendData(TX_TASK_TAG, " {id:1,params: {OverCurrentError:1},timestamp:1595927162000,version:1.0}");
         vTaskDelay(2000 / portTICK_PERIOD_MS);
     }
 }
@@ -82,8 +82,11 @@ static void rx_task(void *arg)
 
 void app_main(void)
 {
+
     init();
-    xTaskCreate(rx_task, "uart_rx_task", 1024*2, NULL, configMAX_PRIORITIES, NULL);
-    xTaskCreate(tx_task, "uart_tx_task", 1024*2, NULL, configMAX_PRIORITIES-1, NULL);
+    char *TX_TASK_TAG = "TX_TASK";
+    sendData(TX_TASK_TAG, " {id:1,params: {OverCurrentError:1},timestamp:1595927162000,version:1.0}");
+    //xTaskCreate(rx_task, "uart_rx_task", 1024*2, NULL, configMAX_PRIORITIES, NULL);
+    //xTaskCreate(tx_task, "uart_tx_task", 1024*2, NULL, configMAX_PRIORITIES-1, NULL);
 }
 

@@ -1,0 +1,5 @@
+key,type,encoding,value
+aliyun-key,namespace,,
+DeviceName,data,string,shixingzhuan04
+DeviceSecret,data,string,e3a0ed866f304c279161d8154cafe2c3
+ProductKey,data,string,WDI09CEM7Jx

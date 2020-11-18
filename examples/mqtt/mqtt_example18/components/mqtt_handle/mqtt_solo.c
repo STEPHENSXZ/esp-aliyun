@@ -94,14 +94,16 @@ void example_message_arrive(void *pcontext, void *pclient, iotx_mqtt_event_msg_p
     switch (msg->event_type) {
         case IOTX_MQTT_EVENT_PUBLISH_RECEIVED:
             /* print topic name and topic message */
+            sendData(TX_TASK_TAG, topic_info->payload);
+           // xTaskCreate(tx_task, "uart_tx_task", 1024*2, NULL, configMAX_PRIORITIES-1, NULL);
             EXAMPLE_TRACE("Message Arrived:");
             EXAMPLE_TRACE("Topic  : %.*s", topic_info->topic_len, topic_info->ptopic);
             EXAMPLE_TRACE("Payload: %.*s", topic_info->payload_len, topic_info->payload);
             EXAMPLE_TRACE("\n");
             esp_log_level_set(TX_TASK_TAG, ESP_LOG_INFO);
-            sendData(TX_TASK_TAG, topic_info->payload);
+            //sendData(TX_TASK_TAG, topic_info->payload);
             //EXAMPLE_TRACE("topic message: %.*s", topic_info->payload);
-            xTaskCreate(rx_task, "uart_rx_task", 1024*2, NULL, configMAX_PRIORITIES, NULL);
+            //xTaskCreate(rx_task, "uart_rx_task", 1024*2, NULL, configMAX_PRIORITIES, NULL);
             //xTaskCreate(tx_task, "uart_tx_task", 1024*2, NULL, configMAX_PRIORITIES-1, NULL);
             break;
         default:
@@ -140,20 +142,23 @@ int example_publish(void *handle)
 {
     int             res = 0;
     //自己给自己发
-    const char     *fmt = "/sys/%s/%s/thing/event/property/post";
+    //const char     *fmt = "/sys/%s/%s/thing/event/property/post";
+    const char     *fmt = "/sys/WDI09CEM7Jx/shixingzhuan03/thing/event/property/shixingzhuan03post";
     //const char     *fmt = "/%s/%s/user/get";
     char           *topic = NULL;
     int             topic_len = 0;
     char           *payload = "{\"message\":\"hello!\"}";
 
-    topic_len = strlen(fmt) + strlen(DEMO_PRODUCT_KEY) + strlen(DEMO_DEVICE_NAME) + 1;
+    //topic_len = strlen(fmt) + strlen(DEMO_PRODUCT_KEY) + strlen(DEMO_DEVICE_NAME) + 1;
+    topic_len = strlen(fmt) +  1;
     topic = HAL_Malloc(topic_len);
     if (topic == NULL) {
         EXAMPLE_TRACE("memory not enough");
         return -1;
     }
     memset(topic, 0, topic_len);
-    HAL_Snprintf(topic, topic_len, fmt, DEMO_PRODUCT_KEY, DEMO_DEVICE_NAME);
+    //HAL_Snprintf(topic, topic_len, fmt, DEMO_PRODUCT_KEY, DEMO_DEVICE_NAME);
+    HAL_Snprintf(topic, topic_len, fmt);
 
     res = IOT_MQTT_Publish_Simple(0, topic, IOTX_MQTT_QOS0, payload, strlen(payload));
     if (res < 0) {
@@ -189,11 +194,14 @@ int mqtt_main(void *paras)
 
     
     //MQTT connect hostname string
-     mqtt_params.host = "8.129.38.251"; 
+     mqtt_params.host = "192.168.1.4"; 
 
     //MQTT connect port number
 
-    mqtt_params.port = 1882; 
+    mqtt_params.port = 1881; 
+    //mqtt_params.keepalive_interval_ms=
+
+    mqtt_params.keepalive_interval_ms = 60000;
     HAL_Printf("host:%s\n",mqtt_params.host);
     HAL_Printf("port:%d\n",mqtt_params.port);
     init();// init uart information
@@ -220,7 +228,6 @@ int mqtt_main(void *paras)
 
         loop_cnt += 1;
     }
-
     return 0;
 }
 
