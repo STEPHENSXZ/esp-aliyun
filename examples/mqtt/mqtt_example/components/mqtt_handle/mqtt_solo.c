@@ -94,14 +94,14 @@ void example_message_arrive(void *pcontext, void *pclient, iotx_mqtt_event_msg_p
     switch (msg->event_type) {
         case IOTX_MQTT_EVENT_PUBLISH_RECEIVED:
             /* print topic name and topic message */
+            sendData(TX_TASK_TAG, topic_info->payload);
             EXAMPLE_TRACE("Message Arrived:");
             EXAMPLE_TRACE("Topic  : %.*s", topic_info->topic_len, topic_info->ptopic);
             EXAMPLE_TRACE("Payload: %.*s", topic_info->payload_len, topic_info->payload);
             EXAMPLE_TRACE("\n");
             esp_log_level_set(TX_TASK_TAG, ESP_LOG_INFO);
-            sendData(TX_TASK_TAG, topic_info->payload);
             //EXAMPLE_TRACE("topic message: %.*s", topic_info->payload);
-            xTaskCreate(rx_task, "uart_rx_task", 1024*2, NULL, configMAX_PRIORITIES, NULL);
+            //xTaskCreate(rx_task, "uart_rx_task", 1024*2, NULL, configMAX_PRIORITIES, NULL);
             //xTaskCreate(tx_task, "uart_tx_task", 1024*2, NULL, configMAX_PRIORITIES-1, NULL);
             break;
         default:

@@ -28,7 +28,7 @@ void init(void) {
         .parity = UART_PARITY_DISABLE,
         .stop_bits = UART_STOP_BITS_1,
         .flow_ctrl = UART_HW_FLOWCTRL_DISABLE,
-        .rx_flow_ctrl_thresh = 122,		//
+        .rx_flow_ctrl_thresh = 122,		
     };
     // We won't use a buffer for sending data.
     uart_driver_install(uart_num, RX_BUF_SIZE * 2, 0, 0, NULL, 0);
@@ -199,7 +199,6 @@ int mqtt_main(void *paras)
     //MQTT connect port number
 
     mqtt_params.port = 1881; 
-    //mqtt_params.keepalive_interval_ms=
 
     mqtt_params.keepalive_interval_ms = 60000;
     HAL_Printf("host:%s\n",mqtt_params.host);
