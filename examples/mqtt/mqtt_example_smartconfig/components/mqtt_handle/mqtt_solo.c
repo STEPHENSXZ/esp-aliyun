@@ -12,6 +12,12 @@
 #include "driver/uart.h"
 #include "string.h"
 #include "driver/gpio.h"
+
+#include "esp_err.h"
+#include "esp_efuse.h"
+#include "esp_efuse_table.h"
+
+
 static const int RX_BUF_SIZE = 1024;
 static const int uart_num = UART_NUM_2;
 #define TXD_PIN (GPIO_NUM_16)
@@ -20,6 +26,7 @@ static const int uart_num = UART_NUM_2;
 char DEMO_PRODUCT_KEY[IOTX_PRODUCT_KEY_LEN + 1] = {0};
 char DEMO_DEVICE_NAME[IOTX_DEVICE_NAME_LEN + 1] = {0};
 char DEMO_DEVICE_SECRET[IOTX_DEVICE_SECRET_LEN + 1] = {0};
+
 
 void init(void) {
     const uart_config_t uart_config = {
@@ -180,7 +187,7 @@ int mqtt_main(void *paras)
     int                     res = 0;
     int                     loop_cnt = 0;
     iotx_mqtt_param_t       mqtt_params;
-
+    
     HAL_GetProductKey(DEMO_PRODUCT_KEY);
     HAL_GetDeviceName(DEMO_DEVICE_NAME);
     HAL_GetDeviceSecret(DEMO_DEVICE_SECRET);
@@ -189,7 +196,6 @@ int mqtt_main(void *paras)
 
     /* Initialize MQTT parameter */
     memset(&mqtt_params, 0x0, sizeof(mqtt_params));
-
     
     //MQTT connect hostname string
      mqtt_params.host = "192.168.1.4"; 
@@ -202,6 +208,15 @@ int mqtt_main(void *paras)
     mqtt_params.keepalive_interval_ms = 60000;
     HAL_Printf("host:%s\n",mqtt_params.host);
     HAL_Printf("port:%d\n",mqtt_params.port);
+
+    uint64_t mac;
+    uint32_t chipID=0;
+    ESP_ERROR_CHECK(esp_efuse_read_field_blob(ESP_EFUSE_MAC_FACTORY, &mac, sizeof(mac) ));
+    HAL_Printf("1. read MAC address: %x\n", mac);
+    uint64_t macAddressTrunc = mac << 40;
+    chipID = macAddressTrunc >> 40;
+    HAL_Printf("chipid is : %x\n",chipID);
+
     init();// init uart information
     mqtt_params.handle_event.h_fp = example_event_handle;
 
